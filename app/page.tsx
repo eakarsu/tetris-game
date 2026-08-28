@@ -164,16 +164,17 @@ function spawnPiece(type: PieceType): ActivePiece {
 function tryRotate(state: GameState, dir: Dir): GameState {
   const p = state.active;
   if (!p) return state;
+  const targetRot: Rotation = dir === "cw" ? ((p.rot + 1) % 4) as Rotation : ((p.rot + 3) % 4) as Rotation;
   const table = p.type === 0 ? KICKS_I : KICKS_JLSTZ;
-  const key = `${p.rot}>${dir === "cw" ? (p.rot + 1) % 4 : (p.rot + 3) % 4}` as string;
+  const key = `${p.rot}>${targetRot}` as string;
   const kicks = table[key] ?? [[0, 0]];
   for (const [dx, dy] of kicks) {
     const nx = p.x + dx;
     const ny = p.y + dy;
-    if (!collides(state.board, p.type, p.rot, nx, ny)) {
+    if (!collides(state.board, p.type, targetRot, nx, ny)) {
       return {
         ...state,
-        active: { ...p, x: nx, y: ny },
+        active: { ...p, rot: targetRot, x: nx, y: ny },
         lockTimer: 0,
         resetCount: 0,
       };
@@ -873,4 +874,3 @@ function DeckButton({
     </button>
   );
 }
-
