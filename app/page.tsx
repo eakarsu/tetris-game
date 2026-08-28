@@ -457,13 +457,41 @@ export default function Page() {
   /* ---- Keyboard handling ---- */
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
+      // Ignore typing controls if present
+      const target = e.target as HTMLElement;
+      if (target.tagName === "INPUT" || target.tagName === "TEXTAREA" || target.isContentEditable) {
+        return;
+      }
+
       const k = e.key.toLowerCase();
       const code = e.code;
       const playing = stateRef.current.phase === "playing";
 
+      // Determine if this is a rotation key
+      const isRotationKey =
+        code === "ArrowUp" ||
+        code === "KeyW" ||
+        code === "KeyX" ||
+        code === "KeyZ";
+
       // Prevent page scroll for game keys.
       if (["arrowup", "arrowdown", "arrowleft", "arrowright", " ", "spacebar"].includes(k) || code === "Space") {
         e.preventDefault();
+      }
+
+      // Handle rotation keys separately to manage repeat behavior
+      if (isRotationKey) {
+        if (e.repeat) {
+          // Ignore repeats for rotation keys so each press rotates once
+          return;
+        }
+        
+        if (code === "ArrowUp" || code === "KeyW" || code === "KeyX") {
+          if (playing) rotate("cw");
+        } else if (code === "KeyZ") {
+          if (playing) rotate("ccw");
+        }
+        return;
       }
 
       switch (k) {
@@ -478,14 +506,6 @@ export default function Page() {
         case "arrowdown":
         case "s":
           if (playing) softDrop();
-          break;
-        case "arrowup":
-        case "w":
-        case "x":
-          if (playing) rotate("cw");
-          break;
-        case "z":
-          if (playing) rotate("ccw");
           break;
         case " ":
         case "enter":
