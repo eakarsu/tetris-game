@@ -297,19 +297,10 @@ function freshPlaying(): GameState {
 
 export default function Page() {
   const [state, setState] = useState<GameState>(() => initialState());
-  const [best, setBest] = useState<number>(() => {
-    if (typeof window === "undefined") return 0;
-    try {
-      const raw = window.localStorage.getItem(BEST_KEY);
-      if (raw != null) {
-        const v = parseInt(raw, 10);
-        if (!Number.isNaN(v)) return v;
-      }
-    } catch {
-      /* storage unavailable */
-    }
-    return 0;
-  });
+  
+  // Initialize best to 0 to match server render. 
+  // We will load from localStorage after hydration to avoid mismatch.
+  const [best, setBest] = useState<number>(0);
 
   // Refs mirror the latest state so callbacks/effects never read stale data.
   const stateRef = useRef(state);
@@ -327,6 +318,30 @@ export default function Page() {
   useEffect(() => {
     bestRef.current = best;
   }, [best]);
+
+  /* ---- Load persisted best score after hydration ---- */
+  useEffect(() => {
+    // Use setTimeout to ensure this runs asynchronously after the initial paint/hydration
+    // preventing synchronous setState-in-effect lint errors and ensuring SSR/CSR consistency.
+    const timeoutId = window.setTimeout(() => {
+      try {
+        const raw = window.localStorage.getItem(BEST_KEY);
+        if (raw != null) {
+          const v = parseInt(raw, 10);
+          if (!Number.isNaN(v)) {
+            setBest(v);
+            bestRef.current = v;
+          }
+        }
+      } catch {
+        /* storage unavailable */
+      }
+    }, 0);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, []);
 
   /* ---- Persist best whenever it grows ---- */
   useEffect(() => {
